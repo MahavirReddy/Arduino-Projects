@@ -1,0 +1,23 @@
+void setup()
+{
+  pinMode(7, INPUT_PULLUP);
+  pinMode(8, OUTPUT);
+
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  if (digitalRead(7) == LOW)
+  {
+    digitalWrite(8, LOW);
+    Serial.println("Button Pressed");
+  }
+  else
+  {
+    digitalWrite(8, HIGH);
+    Serial.println("Button Released");
+  }
+
+  delay(200);
+}
