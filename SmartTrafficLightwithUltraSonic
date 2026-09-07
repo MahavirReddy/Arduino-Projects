@@ -1,0 +1,358 @@
+#define TRIG_N 2
+#define ECHO_N 3
+#define RED_N 4
+#define GREEN_N 5
+#define TRIG_E 6
+#define ECHO_E 7
+#define RED_E 8
+#define GREEN_E 9
+// ---------------- SOUTH ROAD ----------------
+#define TRIG_S 10
+#define ECHO_S 11
+#define RED_S 12
+#define GREEN_S 13
+// ---------------- WEST ROAD ----------------
+#define TRIG_W A0
+#define ECHO_W A1
+#define RED_W A2
+#define GREEN_W A3
+// =====================================================
+// SETTINGS
+// =====================================================
+// Maximum distance at which a vehicle is considered
+// to be present.
+#define DETECTION_DISTANCE 50
+
+// Minimum time for which a road stays green
+#define MIN_GREEN_TIME 5000
+
+// Time during which all roads are RED before
+// changing to another road
+#define ALL_RED_TIME 500
+// Current green road
+// 0 = North
+// 1 = East
+// 2 = South
+// 3 = West
+int currentRoad = 0;
+unsigned long greenStartTime;
+// =====================================================
+// SETUP
+// =====================================================
+
+void setup()
+{
+  Serial.begin(9600);
+
+  // -------- Ultrasonic sensors --------
+
+  pinMode(TRIG_N, OUTPUT);
+  pinMode(ECHO_N, INPUT);
+
+  pinMode(TRIG_E, OUTPUT);
+  pinMode(ECHO_E, INPUT);
+
+  pinMode(TRIG_S, OUTPUT);
+  pinMode(ECHO_S, INPUT);
+
+  pinMode(TRIG_W, OUTPUT);
+  pinMode(ECHO_W, INPUT);
+
+
+  // -------- Traffic LEDs --------
+
+  pinMode(RED_N, OUTPUT);
+  pinMode(GREEN_N, OUTPUT);
+
+  pinMode(RED_E, OUTPUT);
+  pinMode(GREEN_E, OUTPUT);
+
+  pinMode(RED_S, OUTPUT);
+  pinMode(GREEN_S, OUTPUT);
+
+  pinMode(RED_W, OUTPUT);
+  pinMode(GREEN_W, OUTPUT);
+
+
+  // Initially all RED
+  allRed();
+
+  delay(2000);
+
+
+  // Start with North GREEN
+  setGreen(0);
+
+  currentRoad = 0;
+
+  greenStartTime = millis();
+}
+
+
+// =====================================================
+// MAIN LOOP
+// =====================================================
+
+void loop()
+{
+  // Read traffic from all four roads
+
+  int northTraffic = getTraffic(TRIG_N, ECHO_N);
+
+  int eastTraffic = getTraffic(TRIG_E, ECHO_E);
+
+  int southTraffic = getTraffic(TRIG_S, ECHO_S);
+
+  int westTraffic = getTraffic(TRIG_W, ECHO_W);
+
+
+  // Display values in Serial Monitor
+
+  Serial.println("----------------------------");
+
+  Serial.print("North Traffic = ");
+  Serial.println(northTraffic);
+
+  Serial.print("East Traffic = ");
+  Serial.println(eastTraffic);
+
+  Serial.print("South Traffic = ");
+  Serial.println(southTraffic);
+
+  Serial.print("West Traffic = ");
+  Serial.println(westTraffic);
+
+
+  // Put values into an array
+
+  int traffic[4];
+
+  traffic[0] = northTraffic;
+  traffic[1] = eastTraffic;
+  traffic[2] = southTraffic;
+  traffic[3] = westTraffic;
+
+
+  // =================================================
+  // FIND ROAD WITH MAXIMUM TRAFFIC
+  // =================================================
+
+  int highestRoad = 0;
+
+  for (int i = 1; i < 4; i++)
+  {
+    if (traffic[i] > traffic[highestRoad])
+    {
+      highestRoad = i;
+    }
+  }
+
+
+  // Display highest traffic road
+
+  Serial.print("Highest traffic: ");
+
+  if (highestRoad == 0)
+    Serial.println("NORTH");
+
+  else if (highestRoad == 1)
+    Serial.println("EAST");
+
+  else if (highestRoad == 2)
+    Serial.println("SOUTH");
+
+  else
+    Serial.println("WEST");
+
+
+  // =================================================
+  // CHANGE SIGNAL
+  // =================================================
+
+  // Check whether another road has higher traffic
+
+  if (highestRoad != currentRoad)
+  {
+    // Make sure current green has stayed long enough
+
+    if (millis() - greenStartTime >= MIN_GREEN_TIME)
+    {
+      changeRoad(highestRoad);
+
+      currentRoad = highestRoad;
+
+      greenStartTime = millis();
+    }
+  }
+
+
+  delay(500);
+}
+
+
+// =====================================================
+// ULTRASONIC DISTANCE
+// =====================================================
+
+long getDistance(int trigPin, int echoPin)
+{
+  // Make sure trigger is LOW
+
+  digitalWrite(trigPin, LOW);
+
+  delayMicroseconds(2);
+
+
+  // Send ultrasonic pulse
+
+  digitalWrite(trigPin, HIGH);
+
+  delayMicroseconds(10);
+
+  digitalWrite(trigPin, LOW);
+
+
+  // Measure echo
+
+  long duration = pulseIn(echoPin, HIGH, 30000);
+
+
+  // No object detected
+
+  if (duration == 0)
+  {
+    return 999;
+  }
+
+
+  // Calculate distance in cm
+
+  long distance = duration * 0.0343 / 2;
+
+
+  return distance;
+}
+
+
+// =====================================================
+// CALCULATE TRAFFIC
+// =====================================================
+
+int getTraffic(int trigPin, int echoPin)
+{
+  int vehicleDetected = 0;
+
+
+  // Take 5 measurements
+
+  for (int i = 0; i < 5; i++)
+  {
+    long distance = getDistance(trigPin, echoPin);
+
+
+    Serial.print(distance);
+    Serial.print(" cm   ");
+
+
+    // Vehicle detected
+
+    if (distance <= DETECTION_DISTANCE)
+    {
+      vehicleDetected++;
+    }
+
+
+    delay(30);
+  }
+
+
+  Serial.println();
+
+
+  return vehicleDetected;
+}
+
+
+// =====================================================
+// CHANGE ROAD
+// =====================================================
+
+void changeRoad(int road)
+{
+  // First turn everything RED
+
+  allRed();
+
+  delay(ALL_RED_TIME);
+
+
+  // Then give GREEN to selected road
+
+  setGreen(road);
+}
+
+
+// =====================================================
+// ALL ROADS RED
+// =====================================================
+
+void allRed()
+{
+  // North
+  digitalWrite(RED_N, HIGH);
+  digitalWrite(GREEN_N, LOW);
+
+
+  // East
+
+  digitalWrite(RED_E, HIGH);
+  digitalWrite(GREEN_E, LOW);
+
+
+  // South
+
+  digitalWrite(RED_S, HIGH);
+  digitalWrite(GREEN_S, LOW);
+
+
+  // West
+
+  digitalWrite(RED_W, HIGH);
+  digitalWrite(GREEN_W, LOW);
+}
+// =====================================================
+// SET ONE ROAD GREEN
+// =====================================================
+
+void setGreen(int road)
+{
+  // First make all roads RED
+
+  allRed();
+  // NORTH
+
+  if (road == 0)
+  {
+    digitalWrite(RED_N, LOW);
+    digitalWrite(GREEN_N, HIGH);
+  }
+  // EAST
+  else if (road == 1)
+  {
+    digitalWrite(RED_E, LOW);
+    digitalWrite(GREEN_E, HIGH);
+  }
+  // SOUTH
+
+  else if (road == 2)
+  {
+    digitalWrite(RED_S, LOW);
+    digitalWrite(GREEN_S, HIGH);
+  // WEST
+
+  else if (road == 3)
+  {
+    digitalWrite(RED_W, LOW);
+    digitalWrite(GREEN_W, HIGH);
+  }
+}
