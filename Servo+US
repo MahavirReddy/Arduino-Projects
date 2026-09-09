@@ -1,0 +1,56 @@
+#include <Servo.h>
+
+Servo myServo;
+
+#define trig 2
+#define echo 3
+
+#define motorEnable 5
+#define motorInput 6
+
+void setup() 
+{
+  Serial.begin(9600);
+
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+
+  pinMode(motorEnable, OUTPUT);
+  pinMode(motorInput, OUTPUT);
+
+  myServo.attach(9);
+  myServo.write(0);
+
+  // Motor ON and moving forward
+  digitalWrite(motorEnable, HIGH);
+  digitalWrite(motorInput, HIGH);
+}
+
+void loop() 
+{
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(trig, LOW);
+
+  long duration = pulseIn(echo, HIGH, 30000);
+  long distance = duration * 0.0343 / 2;
+
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  if(distance > 0 && distance < 5)
+  {
+    myServo.write(60);
+  }
+  else
+  {
+    myServo.write(0);
+  }
+
+  delay(100);
+}
