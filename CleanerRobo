@@ -1,0 +1,90 @@
+#include <Servo.h>
+
+Servo myServo;
+
+#define trig 2
+#define echo 3
+
+#define EN 6
+#define IN1 5
+
+#define FRONT_EN 10
+#define FRONT_IN1 7
+
+void setup()
+{
+  Serial.begin(9600);
+
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+
+  pinMode(EN, OUTPUT);
+  pinMode(IN1, OUTPUT);
+
+  pinMode(FRONT_EN, OUTPUT);
+  pinMode(FRONT_IN1, OUTPUT);
+
+  myServo.attach(9);
+
+  myServo.write(0);
+
+  analogWrite(EN, 205);
+  digitalWrite(IN1, HIGH);
+
+  analogWrite(FRONT_EN, 0);
+  digitalWrite(FRONT_IN1, LOW);
+}
+
+void loop()
+{
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(trig, LOW);
+
+  long duration = pulseIn(echo, HIGH, 30000);
+  long distance = duration * 0.0343 / 2;
+
+  Serial.print("Distance: ");
+  Serial.println(distance);
+
+  if (distance > 0 && distance < 5)
+  {
+    analogWrite(EN, 0);
+    digitalWrite(IN1, LOW);
+
+    myServo.write(60);
+
+    analogWrite(FRONT_EN, 205);
+    digitalWrite(FRONT_IN1, HIGH);
+
+    delay(1000);
+
+    analogWrite(FRONT_EN, 0);
+    digitalWrite(FRONT_IN1, LOW);
+
+    delay(500);
+
+    myServo.write(0);
+
+    delay(500);
+
+    analogWrite(EN, 205);
+    digitalWrite(IN1, HIGH);
+  }
+  else
+  {
+    analogWrite(EN, 205);
+    digitalWrite(IN1, HIGH);
+
+    analogWrite(FRONT_EN, 0);
+    digitalWrite(FRONT_IN1, LOW);
+
+    myServo.write(0);
+  }
+
+  delay(100);
+}
